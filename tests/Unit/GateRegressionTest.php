@@ -6,6 +6,7 @@ namespace Getpeppr\Tests\Unit;
 
 use Getpeppr\Client;
 use Getpeppr\Exception\GetpepprException;
+use Getpeppr\Exception\RequestNotSentException;
 use Getpeppr\Sender;
 use Getpeppr\Tests\Support\FakeHttpClient;
 use Getpeppr\Tests\Support\LeakProbe;
@@ -53,6 +54,9 @@ final class GateRegressionTest extends TestCase
             $client->importInvoice(self::UBL, 'i.xml', '9925:BE0314595348', sender: Sender::externalSubTenant('SENTINELGATESENDER'), idempotencyKey: 'SENTINELGATEIDEM');
             self::fail('expected a GetpepprException');
         } catch (GetpepprException $e) {
+            // Its own family: nothing left, so resending after fixing the HTTP setup is safe.
+            // Never the root class, which means "a response came back that cannot be interpreted".
+            self::assertSame(RequestNotSentException::class, $e::class);
             self::assertNull($e->getPrevious());
             self::assertNull($e->status);
             self::assertStringContainsString('Nothing was sent', $e->getMessage());
@@ -81,6 +85,7 @@ final class GateRegressionTest extends TestCase
             $client->getLegalEntity('SENTINELGATECUSTOMER');
             self::fail('expected a GetpepprException');
         } catch (GetpepprException $e) {
+            self::assertSame(RequestNotSentException::class, $e::class);
             self::assertNull($e->getPrevious());
             self::assertStringNotContainsString('SENTINELGATECUSTOMER', LeakProbe::render($e));
             self::assertStringNotContainsString('SENTINELKEY', LeakProbe::render($e));
@@ -110,6 +115,7 @@ final class GateRegressionTest extends TestCase
             $client->getInvoice('x');
             self::fail('expected a GetpepprException');
         } catch (GetpepprException $e) {
+            self::assertSame(RequestNotSentException::class, $e::class);
             self::assertStringNotContainsString('SENTINELKEY', LeakProbe::render($e));
         }
     }
@@ -129,5 +135,26 @@ final class GateRegressionTest extends TestCase
         $list = TestClient::with($http)->listLegalEntities();
 
         self::assertSame($page, $list->toArray());
+    }
+
+    // Invariant: one exception family, one retry policy. The root class is only
+    // ever thrown for a response that came back and cannot be interpreted.
+
+    #[Test]
+    public function the_root_class_is_thrown_only_by_the_response_classifier(): void
+    {
+        $src = (string) realpath(__DIR__ . '/../../src');
+        $throwers = [];
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($src, \FilesystemIterator::SKIP_DOTS)) as $file) {
+            if (!$file instanceof \SplFileInfo || $file->getExtension() !== 'php') {
+                continue;
+            }
+            $code = (string) file_get_contents($file->getPathname());
+            if (preg_match('/new\s+GetpepprException\s*\(/', $code) === 1) {
+                $throwers[] = substr($file->getPathname(), strlen($src) + 1);
+            }
+        }
+
+        self::assertSame([], $throwers, 'the root family is built only by ErrorClassifier::build() for rows 4 and 12');
     }
 }

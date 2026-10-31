@@ -122,6 +122,7 @@ Every exception extends `Getpeppr\Exception\GetpepprException`. Its class tells 
 | `AuthenticationException` | The API key was refused. | Check the key. |
 | `RetryableException` | A temporary refusal getpeppr announced (rate limit, validator unavailable, …). | Resend later with the same key, after `$e->retryAfter` seconds when set. |
 | `UnsupportedOperationException` | The operation is not supported. | Do not resend. |
+| `RequestNotSentException` | Your PSR-7/PSR-17 implementation could not build the request. | **Nothing was sent.** Fix the HTTP setup, then send again; the same idempotency key is fine. |
 | `UnreadableResponseException` | The call succeeded but its response could not be read. | It **may have taken effect**: read the status, or resend with the same key (which replays instead of sending twice). |
 | `GetpepprException` itself | A response this version cannot interpret. | Do not guess: keep the document and quote `$e->requestId` to support. |
 

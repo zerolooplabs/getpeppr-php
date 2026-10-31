@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Getpeppr;
 
-use Getpeppr\Exception\GetpepprException;
+use Getpeppr\Exception\RequestNotSentException;
 use Getpeppr\Exception\UnreadableResponseException;
 use Getpeppr\Http\Data;
 use Getpeppr\Http\ErrorClassifier;
@@ -216,7 +216,7 @@ final class Client
             // The PSR-7/PSR-17 implementation refused to build the request. Its
             // exception may hold the key, a header or the body in its trace, so
             // it is not chained: only its class is kept.
-            throw new GetpepprException(sprintf(
+            throw new RequestNotSentException(sprintf(
                 'The HTTP message implementation could not build the request (%s). Nothing was sent.',
                 $failure::class,
             ));

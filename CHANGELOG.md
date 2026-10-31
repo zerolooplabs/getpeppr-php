@@ -12,4 +12,5 @@ All notable changes to this package are documented here. The format follows [Kee
 - `Webhook::verify()`: verify `Getpeppr-Signature` and return the event with its id.
 - Exceptions classified by the `Getpeppr-Remediation` header, in a total and ordered matrix, with `DuplicateDocumentException` for the `409` duplicate refusal.
 - `UnreadableResponseException` for a success whose response cannot be read: the call may have taken effect.
+- `RequestNotSentException` when the PSR-7/PSR-17 implementation cannot build the request: nothing was sent.
 - PSR-18 / PSR-17 transport with `php-http/discovery`. PHP 8.2 to 8.5.
