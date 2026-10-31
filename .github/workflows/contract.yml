@@ -1,0 +1,61 @@
+name: Sandbox contract
+
+# Real calls against the getpeppr sandbox, every week and on demand.
+# Needs a dedicated sandbox account with fictitious data only:
+# GETPEPPR_SANDBOX_API_KEY (standard key) and GETPEPPR_SANDBOX_MASTER_API_KEY
+# (master key of a platform account), stored as repository secrets.
+# Missing keys FAIL the run: an unconfigured check must never look green.
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: sandbox-contract
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Require the sandbox keys
+        env:
+          STANDARD_KEY: ${{ secrets.GETPEPPR_SANDBOX_API_KEY }}
+          MASTER_KEY: ${{ secrets.GETPEPPR_SANDBOX_MASTER_API_KEY }}
+        run: |
+          if [ -z "$STANDARD_KEY" ] || [ -z "$MASTER_KEY" ]; then
+            echo "::error::GETPEPPR_SANDBOX_API_KEY and GETPEPPR_SANDBOX_MASTER_API_KEY are not configured: the contract against the sandbox is NOT being checked."
+            exit 1
+          fi
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: composer:v2
+      - name: Install dependencies
+        run: composer update --no-interaction --no-progress
+      - name: Contract tests
+        env:
+          GETPEPPR_CONTRACT_SEND: '1'
+          GETPEPPR_SANDBOX_API_KEY: ${{ secrets.GETPEPPR_SANDBOX_API_KEY }}
+          GETPEPPR_SANDBOX_MASTER_API_KEY: ${{ secrets.GETPEPPR_SANDBOX_MASTER_API_KEY }}
+        run: composer test:contract -- --fail-on-skipped
+      - name: Report the failure in one issue
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Sandbox contract failing"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Failed again on $(date -u +%Y-%m-%d): $run_url"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "The weekly contract run against the getpeppr sandbox failed on $(date -u +%Y-%m-%d): $run_url"
+          fi
