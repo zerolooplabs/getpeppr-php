@@ -61,10 +61,13 @@ $invoice->addLine($line);
 
 $xml = (new UblWriter())->export($invoice);
 
+// Create the operation id once and store it with the invoice: reuse it only to resend this exact request.
+$operationId = bin2hex(random_bytes(16));
+
 $getpeppr = new Client((string) getenv('GETPEPPR_API_KEY'));
 
 try {
-    $sent = $getpeppr->importInvoice($xml, $number . '.xml', $recipient, idempotencyKey: bin2hex(random_bytes(16)));
+    $sent = $getpeppr->importInvoice($xml, $number . '.xml', $recipient, idempotencyKey: $operationId);
 } catch (GetpepprException $e) {
     fwrite(STDERR, $e::class . ': ' . $e->getMessage() . PHP_EOL);
     exit(1);
