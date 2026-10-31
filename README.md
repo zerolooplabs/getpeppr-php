@@ -36,13 +36,17 @@ $invoice = (new UBL\Invoice())
 ;
 $xml = (new UBL\Generator())->invoice($invoice, 'EUR');
 
-$getpeppr = new Client(getenv('GETPEPPR_API_KEY'));
+$getpeppr = new Client((string) getenv('GETPEPPR_API_KEY'));
+
+// One opaque id per logical send, created once and stored with the invoice
+// BEFORE the call, so that a retry of this send reuses it (see "Resending safely").
+$operationId = bin2hex(random_bytes(16));
 
 $sent = $getpeppr->importInvoice(
     $xml,
     'INV-2026-001.xml',
     '9925:BE0314595348',               // the recipient's Peppol id, scheme:identifier
-    idempotencyKey: $operationId,      // see "Resending safely" below
+    idempotencyKey: $operationId,
 );
 
 echo $sent->providerDocumentId; // read its status with getInvoice()
@@ -63,7 +67,7 @@ $invoice = new Invoice(Peppol::class);
 // … number, seller, buyer, lines, as you already do
 $xml = (new UblWriter())->export($invoice);
 
-$sent = $getpeppr->importInvoice($xml, 'F-2026-001.xml', '9925:BE0314595348', idempotencyKey: $operationId);
+$sent = $getpeppr->importInvoice($xml, 'F-2026-001.xml', '9925:BE0314595348', idempotencyKey: bin2hex(random_bytes(16)));
 ```
 
 ## Read the status
@@ -92,9 +96,9 @@ $customer = $getpeppr->createLegalEntity([
 ]);
 // $customer->created is false when that externalId already existed.
 
-$getpeppr->importInvoice($xml, 'INV-8412-001.xml', $recipient,
+$getpeppr->importInvoice($xml, 'INV-8412-001.xml', '9925:BE0314595348',
     sender: Sender::externalSubTenant('customer_8412'), // or Sender::legalEntity($customer->id)
-    idempotencyKey: $operationId,
+    idempotencyKey: bin2hex(random_bytes(16)),
 );
 
 $page = $getpeppr->listLegalEntities(externalId: 'customer_8412');
@@ -110,7 +114,7 @@ Every exception extends `Getpeppr\Exception\GetpepprException`. Its class tells 
 | Exception | What happened | What to do |
 |---|---|---|
 | `TransportException` | No response arrived (network, timeout), or the API host answered `429`/`5xx` on its own. | The document **may have been sent**. Resend later with the **same** idempotency key, never a new one. |
-| `DocumentTooLargeException` | The request is over the size limit. | At most about 3 MB of document. Nothing was sent. |
+| `DocumentTooLargeException` | The API host refused a request over the size limit before getpeppr saw it. (When getpeppr refuses it, `request.body_too_large`, you get an `InvalidRequestException`, its parent class.) | At most about 3 MB of document. Nothing was sent. |
 | `DuplicateDocumentException` | The same invoice was already sent moments ago (`409`). | **Do not send it again.** Read the status of `$e->duplicateOf`, the document that already left. |
 | `IdempotencyKeyException` | The key was reused for another body, or was blank. | Fix the key: one key is one operation. |
 | `InvalidRequestException` | The request or the document must be fixed, e.g. a Peppol rule is broken (`invoices_import.validation_failed`). | Resending it unchanged fails the same way. |
@@ -147,7 +151,16 @@ try {
 
 The package never retries by itself. When you retry, the idempotency key decides whether the API sees a retry or a new send.
 
-- **Use an opaque operation id**, for example a UUID, created once per logical send and stored with the invoice. Reuse it only to resend exactly the same request.
+- **Use an opaque operation id**, for example a UUID, created once per logical send and stored with the invoice before the call. Reuse it only to resend exactly the same request:
+
+```php
+// $invoice is your own record. The id is created on the first attempt and reloaded on every retry.
+$invoice->getpepprOperationId ??= bin2hex(random_bytes(16));
+$repository->save($invoice);
+
+$sent = $getpeppr->importInvoice($xml, $filename, $recipient, idempotencyKey: $invoice->getpepprOperationId);
+```
+
 - **Do not derive the key from the invoice number alone.** The API keeps one entry per API key, endpoint and body fingerprint: on a platform, two of your customers may use the same invoice number under the same master key, and the second legitimate send would be refused. If you must derive it, include at least the sender, the number, the recipient and the document type.
 - Same key, same body: the original response is replayed and nothing is sent twice.
 - Same key, different body: `IdempotencyKeyException` (`idempotency.key_reused`).
@@ -213,7 +226,7 @@ $getpeppr = new Client(
 
 `importInvoice()` also takes `skipValidation: true`, which sends without the Peppol rulebook check for that call (`x-skip-validation`). Use it only for a document you validated yourself.
 
-Every result exposes `requestId`, `resultCode` and `httpStatus`, and `toArray()` returns the decoded response for fields this version does not map. Invalid arguments throw `\InvalidArgumentException` before anything is sent: a blank, `.` or `..` id, an API key or idempotency key that cannot be an HTTP header value, or text that is not valid UTF-8 (convert Latin-1 with `mb_convert_encoding()` first). A response that succeeded but cannot be read throws `UnreadableResponseException`: the call may have taken effect, so check before repeating it.
+Every result (`ImportResult`, `Invoice`, `LegalEntity`, `LegalEntityList`) exposes `requestId`, `resultCode` and `httpStatus`, and `toArray()` returns the decoded response for fields this version does not map. Invalid arguments throw `\InvalidArgumentException` before anything is sent: a blank, `.` or `..` id, an API key or idempotency key that cannot be an HTTP header value, or text that is not valid UTF-8 (convert Latin-1 with `mb_convert_encoding()` first). A response that succeeded but cannot be read throws `UnreadableResponseException`: the call may have taken effect, so check before repeating it.
 
 ## Scope and limits
 

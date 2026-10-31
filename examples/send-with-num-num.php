@@ -63,6 +63,10 @@ $invoice = (new UBL\Invoice())
     ->setLegalMonetaryTotal((new UBL\LegalMonetaryTotal())->setLineExtensionAmount(100)->setTaxExclusiveAmount(100)->setTaxInclusiveAmount(100)->setPayableAmount(100));
 
 $xml = (new UBL\Generator())->invoice($invoice, 'EUR');
+if (!is_string($xml)) {
+    fwrite(STDERR, 'num-num/ubl-invoice produced no XML' . PHP_EOL);
+    exit(1);
+}
 
 // Create the operation id once and store it with the invoice: reuse it only to resend this exact request.
 $operationId = bin2hex(random_bytes(16));

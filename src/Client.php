@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Getpeppr;
 
+use Getpeppr\Exception\GetpepprException;
 use Getpeppr\Exception\UnreadableResponseException;
 use Getpeppr\Http\Data;
 use Getpeppr\Http\ErrorClassifier;
@@ -151,7 +152,7 @@ final class Client
         $pagination = Data::object($data, 'pagination') ?? [];
 
         return new LegalEntityList(
-            data: $entities,
+            entities: $entities,
             totalCount: Data::int($pagination, 'total_count'),
             offset: Data::int($pagination, 'offset'),
             limit: Data::int($pagination, 'limit'),
@@ -159,6 +160,7 @@ final class Client
             httpStatus: $status,
             resultCode: $meta->resultCode,
             requestId: $meta->requestId,
+            raw: $data,
         );
     }
 
@@ -195,15 +197,7 @@ final class Client
         #[\SensitiveParameter] array $headers = [],
         array $identifiedBy = [],
     ): array {
-        $apiKey = $this->apiKey->getValue();
-        assert(is_string($apiKey));
-        $request = $this->requestFactory->createRequest($method, $this->baseUrl . $path)
-            ->withHeader('Authorization', 'Bearer ' . $apiKey)
-            ->withHeader('Accept', 'application/json')
-            ->withHeader('User-Agent', 'getpeppr-php/' . self::VERSION);
-        foreach ($headers as $name => $value) {
-            $request = $request->withHeader($name, $value);
-        }
+        $json = null;
         if ($payload !== null) {
             // Deliberately without JSON_THROW_ON_ERROR: a JsonException would capture
             // a json_encode frame whose argument is the whole payload.
@@ -214,9 +208,18 @@ final class Client
                     . '(convert Latin-1 text with mb_convert_encoding() first) and every number finite. Nothing was sent.',
                 );
             }
-            $request = $request
-                ->withHeader('Content-Type', 'application/json')
-                ->withBody($this->streamFactory->createStream($json));
+        }
+
+        try {
+            $request = $this->buildRequest($method, $path, $headers, $json);
+        } catch (\Throwable $failure) {
+            // The PSR-7/PSR-17 implementation refused to build the request. Its
+            // exception may hold the key, a header or the body in its trace, so
+            // it is not chained: only its class is kept.
+            throw new GetpepprException(sprintf(
+                'The HTTP message implementation could not build the request (%s). Nothing was sent.',
+                $failure::class,
+            ));
         }
 
         $response = $this->send($request);
@@ -228,6 +231,31 @@ final class Client
         $meta = ResultHeaders::fromResponse($response);
 
         return [$this->decode($response, $status, $meta, $identifiedBy), $status, $meta];
+    }
+
+    /** @param array<string, string> $headers */
+    private function buildRequest(
+        string $method,
+        #[\SensitiveParameter] string $path,
+        #[\SensitiveParameter] array $headers,
+        #[\SensitiveParameter] ?string $json,
+    ): RequestInterface {
+        $apiKey = $this->apiKey->getValue();
+        assert(is_string($apiKey));
+        $request = $this->requestFactory->createRequest($method, $this->baseUrl . $path)
+            ->withHeader('Authorization', 'Bearer ' . $apiKey)
+            ->withHeader('Accept', 'application/json')
+            ->withHeader('User-Agent', 'getpeppr-php/' . self::VERSION);
+        foreach ($headers as $name => $value) {
+            $request = $request->withHeader($name, $value);
+        }
+        if ($json !== null) {
+            $request = $request
+                ->withHeader('Content-Type', 'application/json')
+                ->withBody($this->streamFactory->createStream($json));
+        }
+
+        return $request;
     }
 
     private function send(#[\SensitiveParameter] RequestInterface $request): ResponseInterface

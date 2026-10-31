@@ -1,25 +1,27 @@
 #!/usr/bin/env sh
 # Run the CI matrix locally, each PHP version on a clean copy of the repository.
 #   bin/matrix            → 8.2 8.3 8.4 8.5, then 8.2 with the lowest dependencies
+# Every command's own exit status decides: no pipe hides a failure.
 set -u
 root="$(cd "$(dirname "$0")/.." && pwd)"
 status=0
 run() {
   version="$1"; flags="$2"; label="PHP $version${flags:+ (lowest)}"
+  log="$root/build/matrix-$version${flags:+-lowest}.log"
   if "$root/bin/php-docker" "$version" sh -c "
       set -e
       mkdir -p /work && cd /app && tar --exclude=./vendor --exclude=./build --exclude=./.phpunit.cache -cf - . | (cd /work && tar -xf -)
       cd /work
-      composer validate --strict --no-interaction >/dev/null
+      composer validate --strict --no-interaction
       composer update --no-interaction --no-progress --quiet $flags
       php -r 'echo PHP_VERSION, PHP_EOL;'
-      [ -n \"$flags\" ] || composer analyse >/dev/null
-      vendor/bin/phpunit --testsuite unit --no-progress | tail -1
-      composer audit --no-interaction | tail -1
-    " >"$root/build/matrix-$version${flags:+-lowest}.log" 2>&1; then
-    echo "$label: OK — $(grep -E 'OK \(|Tests:' "$root/build/matrix-$version${flags:+-lowest}.log" | tail -1)"
+      [ -n \"$flags\" ] || composer analyse
+      vendor/bin/phpunit --testsuite unit --no-progress
+      composer audit --no-interaction
+    " >"$log" 2>&1; then
+    echo "$label: OK — $(grep -E 'OK \(' "$log" | tail -1)"
   else
-    echo "$label: FAILED (build/matrix-$version${flags:+-lowest}.log)"; status=1
+    echo "$label: FAILED ($log)"; status=1
   fi
 }
 mkdir -p "$root/build"

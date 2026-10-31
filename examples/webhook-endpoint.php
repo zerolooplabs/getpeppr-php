@@ -21,7 +21,7 @@ use Getpeppr\Exception\WebhookVerificationException;
 use Getpeppr\Webhook;
 
 $rawBody = (string) file_get_contents('php://input');
-$signature = $_SERVER['HTTP_GETPEPPR_SIGNATURE'] ?? '';
+$signature = is_string($_SERVER['HTTP_GETPEPPR_SIGNATURE'] ?? null) ? $_SERVER['HTTP_GETPEPPR_SIGNATURE'] : '';
 
 try {
     $event = Webhook::verify($rawBody, $signature, (string) getenv('GETPEPPR_WEBHOOK_SECRET'));
