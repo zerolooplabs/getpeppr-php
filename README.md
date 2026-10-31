@@ -67,7 +67,7 @@ $invoice = new Invoice(Peppol::class);
 // … number, seller, buyer, lines, as you already do
 $xml = (new UblWriter())->export($invoice);
 
-$sent = $getpeppr->importInvoice($xml, 'F-2026-001.xml', '9925:BE0314595348', idempotencyKey: bin2hex(random_bytes(16)));
+$sent = $getpeppr->importInvoice($xml, 'F-2026-001.xml', '9925:BE0314595348', idempotencyKey: $operationId); // created once, stored with the invoice
 ```
 
 ## Read the status
@@ -98,7 +98,7 @@ $customer = $getpeppr->createLegalEntity([
 
 $getpeppr->importInvoice($xml, 'INV-8412-001.xml', '9925:BE0314595348',
     sender: Sender::externalSubTenant('customer_8412'), // or Sender::legalEntity($customer->id)
-    idempotencyKey: bin2hex(random_bytes(16)),
+    idempotencyKey: $operationId,                       // created once, stored with the invoice
 );
 
 $page = $getpeppr->listLegalEntities(externalId: 'customer_8412');
@@ -117,13 +117,13 @@ Every exception extends `Getpeppr\Exception\GetpepprException`. Its class tells 
 | `DocumentTooLargeException` | The API host refused a request over the size limit before getpeppr saw it. (When getpeppr refuses it, `request.body_too_large`, you get an `InvalidRequestException`, its parent class.) | At most about 3 MB of document. Nothing was sent. |
 | `DuplicateDocumentException` | The same invoice was already sent moments ago (`409`). | **Do not send it again.** Read the status of `$e->duplicateOf`, the document that already left. |
 | `IdempotencyKeyException` | The key was reused for another body, or was blank. | Fix the key: one key is one operation. |
-| `InvalidRequestException` | The request or the document must be fixed, e.g. a Peppol rule is broken (`invoices_import.validation_failed`). | Resending it unchanged fails the same way. |
+| `InvalidRequestException` | The request or the document must be fixed, e.g. a Peppol rule is broken (`invoices_import.validation_failed`). | Fix what the result code names: the document, or the request around it (for example `sender` sent with a standard key). Send a corrected invoice under a new idempotency key. |
 | `ContactSupportException` | The account cannot do this right now (identity not verified, platform contract not active, master key needed, …). | **The document is not at fault.** Keep it, and resend it once the account state has changed. |
 | `AuthenticationException` | The API key was refused. | Check the key. |
 | `RetryableException` | A temporary refusal getpeppr announced (rate limit, validator unavailable, …). | Resend later with the same key, after `$e->retryAfter` seconds when set. |
 | `UnsupportedOperationException` | The operation is not supported. | Do not resend. |
 | `RequestNotSentException` | Your PSR-7/PSR-17 implementation could not build the request. | **Nothing was sent.** Fix the HTTP setup, then send again; the same idempotency key is fine. |
-| `UnreadableResponseException` | The call succeeded but its response could not be read. | It **may have taken effect**: read the status, or resend with the same key (which replays instead of sending twice). |
+| `UnreadableResponseException` | The call succeeded but its response could not be read. | It **may have taken effect**: read the status, or resend with the same key, which never sends it twice (see [Resending safely](#resending-safely)). |
 | `GetpepprException` itself | A response this version cannot interpret. | Do not guess: keep the document and quote `$e->requestId` to support. |
 
 The family comes from the `Getpeppr-Remediation` header the API sends, not from `retryable` alone: a rejected document and an account that may not send both say `retryable: false`, and they call for opposite actions. `DocumentTooLargeException` is also an `InvalidRequestException`.
@@ -142,7 +142,7 @@ try {
 } catch (Exception\ContactSupportException $e) {
     holdUntilAccountReady($invoice, $e->resultCode);    // keep the document
 } catch (Exception\InvalidRequestException $e) {
-    markAsRejected($invoice, $e->resultCode, $e->resultDocs);
+    markAsRejected($invoice, $e->resultCode, $e->resultDocs); // fix it, send it under a new key
 }
 ```
 
@@ -162,9 +162,12 @@ $repository->save($invoice);
 $sent = $getpeppr->importInvoice($xml, $filename, $recipient, idempotencyKey: $invoice->getpepprOperationId);
 ```
 
-- **Do not derive the key from the invoice number alone.** The API keeps one entry per API key, endpoint and body fingerprint: on a platform, two of your customers may use the same invoice number under the same master key, and the second legitimate send would be refused. If you must derive it, include at least the sender, the number, the recipient and the document type.
-- Same key, same body: the original response is replayed and nothing is sent twice.
-- Same key, different body: `IdempotencyKeyException` (`idempotency.key_reused`).
+- **Do not derive the key from the invoice number.** Once a request was sent with a key, that key belongs to it for good, across all your API keys and legal entities. On a platform, two of your customers may use the same invoice number, and the second legitimate send would be refused.
+- Same key, same body: never a second document. You get `201` for the same document, with the same `$sent->providerDocumentId`. While another attempt under that key is still running, you get `RetryableException` (result code `idempotency.concurrent_request`) instead: retry later with the same key. Sent from another of your API keys within 15 minutes, the resend gets `DuplicateDocumentException`, naming the document.
+- After a `TransportException`, the invoice may or may not have gone out. Resend the same body with the same key: you get the `201` of the document if it went out, never a second copy. Keep the body identical until you have an answer.
+- Same key, different body: `IdempotencyKeyException` (`idempotency.key_reused`), and nothing is sent. A corrected invoice is a new send: give it a new operation id. Once getpeppr has tried to send a request, its key stays bound to it even if the network refuses the document.
+- Rarely, the network already holds a document under your key that getpeppr cannot attribute to your request. The key then stays blocked, and nothing is sent, until support reconciles it: if the same request keeps getting `RetryableException`, quote `$e->requestId` to support.
+- Like any request, a resend can also meet a refusal raised before these checks, for example `AuthenticationException`, `ContactSupportException` (production eligibility checks), or `RetryableException` for a rate limit or for result code `idempotency.cache_unreadable` when the key cannot be verified. Nothing is sent then: once the cause is cleared, resend with the same key.
 
 What the API does on top, which you do not have to reimplement:
 

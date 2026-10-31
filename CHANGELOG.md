@@ -2,7 +2,14 @@
 
 All notable changes to this package are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the package follows [Semantic Versioning](https://semver.org/) (0.x: the interface may still change between minor versions).
 
-## [0.1.0] - unreleased
+## [Unreleased]
+
+### Fixed
+
+- Documentation: resending under the same idempotency key now follows the API contract published with GPR-1434: the same body gets the `201` of the same document (or `RetryableException` with `idempotency.concurrent_request` while an attempt is still running), never a second copy (a resend can still first meet a refusal that sends nothing, such as authentication, a rate limit or `idempotency.cache_unreadable`); a corrected invoice needs a new key, because a key stays bound to the first request sent with it. The `InvalidRequestException` row now names the request as well as the document. The README, its `catch` example and the `InvalidRequestException` and `UnreadableResponseException` docblocks say so, and the README no longer suggests deriving the key from the document.
+- Documentation: the josemmo and platform examples reuse the stored operation id instead of creating a new idempotency key at call time.
+
+## [0.1.0] - 2026-10-31
 
 ### Added
 
