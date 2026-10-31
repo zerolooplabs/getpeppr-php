@@ -6,7 +6,7 @@ All notable changes to this package are documented here. The format follows [Kee
 
 ### Fixed
 
-- Documentation: a retry under the same idempotency key never sends a document twice, but it replays the first answer only when that answer was recorded. Otherwise the retry gets an error (for example `DuplicateDocumentException`, or `InvalidRequestException` with `provider.rejected`) although the document may already have left. The README said the original response was always replayed; the README, its `catch` example and the `UnreadableResponseException` docblock now say what the retry can answer.
+- Documentation: resending under the same idempotency key now follows the API contract published with GPR-1434: the same body gets the `201` of the same document (or `RetryableException` with `idempotency.concurrent_request` while an attempt is still running), never a second copy; a corrected invoice needs a new key, because a key stays bound to the first request sent with it. The README, its `catch` example and the `InvalidRequestException` and `UnreadableResponseException` docblocks say so, and the README no longer suggests deriving the key from the document.
 - Documentation: the josemmo and platform examples reuse the stored operation id instead of creating a new idempotency key at call time.
 
 ## [0.1.0] - 2026-10-31
