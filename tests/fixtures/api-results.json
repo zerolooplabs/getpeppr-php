@@ -1,0 +1,915 @@
+{
+    "source": {
+        "file": "packages/website/src/data/api-results.generated.ts",
+        "commit": "60522a1d4",
+        "published": "https://getpeppr.dev/docs/api-results/",
+        "operations": [
+            "POST /v1/invoices/import",
+            "GET /v1/invoices/{id}",
+            "POST /v1/legal-entities",
+            "GET /v1/legal-entities",
+            "GET /v1/legal-entities/{id}"
+        ]
+    },
+    "results": [
+        {
+            "code": "auth.api_key_invalid",
+            "status": 401,
+            "retryable": false,
+            "remediation": "authenticate",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "GET /v1/legal-entities",
+                "GET /v1/legal-entities/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "auth.credentials_missing",
+            "status": 401,
+            "retryable": false,
+            "remediation": "authenticate",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "GET /v1/legal-entities",
+                "GET /v1/legal-entities/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "auth.platform_exit_read_only",
+            "status": 403,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "auth.too_many_failures",
+            "status": 429,
+            "retryable": true,
+            "remediation": "retry_after",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "GET /v1/legal-entities",
+                "GET /v1/legal-entities/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "authz.master_key_required",
+            "status": 403,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "GET /v1/legal-entities",
+                "GET /v1/legal-entities/{id}",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "authz.scope_denied",
+            "status": 403,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "GET /v1/legal-entities",
+                "GET /v1/legal-entities/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "idempotency.key_blank",
+            "status": 400,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "idempotency.key_reused",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "idempotency.legacy_replay_200",
+            "status": 200,
+            "retryable": false,
+            "remediation": "none",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "idempotency.legacy_replay_201",
+            "status": 201,
+            "retryable": false,
+            "remediation": "none",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "idempotency.legacy_replay_204",
+            "status": 204,
+            "retryable": false,
+            "remediation": "none",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "identity.verification_required",
+            "status": 422,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices.body_not_an_object",
+            "status": 400,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices.not_found",
+            "status": 404,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}"
+            ]
+        },
+        {
+            "code": "invoices.read",
+            "status": 200,
+            "retryable": false,
+            "remediation": "none",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}"
+            ]
+        },
+        {
+            "code": "invoices.submission_record_missing",
+            "status": 500,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}"
+            ]
+        },
+        {
+            "code": "invoices_import.created",
+            "status": 201,
+            "retryable": false,
+            "remediation": "none",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.document_too_complex",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.duplicate_document",
+            "status": 409,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.file_required",
+            "status": 400,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.filename_required",
+            "status": 400,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.invalid_base64",
+            "status": 400,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.malformed_xml",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.no_sender_identifier",
+            "status": 422,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.not_ubl_document",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.platform_billing_not_active",
+            "status": 422,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.production_access_expired",
+            "status": 422,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.recipient_required",
+            "status": 400,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.rulebook_evaluation_failed",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.sender_identity_incomplete",
+            "status": 422,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.sub_tenant_has_no_identifier",
+            "status": 422,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.supplier_identity_ambiguous",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.supplier_identity_mismatch",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.supplier_identity_not_owned",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.undecodable_document",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.unreadable_document",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.unreadable_recipient",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.unsupported_encoding",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.validation_failed",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices_import.validation_unavailable",
+            "status": 500,
+            "retryable": true,
+            "remediation": "retry",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "legal_entities.archive_scope_required",
+            "status": 403,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.audit_write_failed",
+            "status": 500,
+            "retryable": true,
+            "remediation": "retry",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.creation_in_progress",
+            "status": 409,
+            "retryable": true,
+            "remediation": "retry",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.france_identifier_order",
+            "status": 400,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.iceland_identifier_order",
+            "status": 400,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.identifier_already_in_use",
+            "status": 409,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.identifier_immutable",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.identifier_set_invalid",
+            "status": 400,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.identifier_sets_temporarily_unavailable",
+            "status": 503,
+            "retryable": true,
+            "remediation": "retry",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.listed",
+            "status": 200,
+            "retryable": false,
+            "remediation": "none",
+            "scope": "route",
+            "operations": [
+                "GET /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.multiple_identifiers_production_unavailable",
+            "status": 422,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.not_found",
+            "status": 404,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "GET /v1/legal-entities/{id}"
+            ]
+        },
+        {
+            "code": "legal_entities.platform_billing_suspended",
+            "status": 422,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.platform_cap_reached",
+            "status": 422,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.provider_not_configured",
+            "status": 500,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.read",
+            "status": 200,
+            "retryable": false,
+            "remediation": "none",
+            "scope": "route",
+            "operations": [
+                "GET /v1/legal-entities/{id}"
+            ]
+        },
+        {
+            "code": "legal_entities.request_invalid",
+            "status": 400,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "GET /v1/legal-entities",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.sandbox_cap_reached",
+            "status": 422,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.sub_tenant_created",
+            "status": 202,
+            "retryable": false,
+            "remediation": "none",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.sub_tenant_exists",
+            "status": 200,
+            "retryable": false,
+            "remediation": "none",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "provider.authentication_failed",
+            "status": 502,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "provider.conflict",
+            "status": 409,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "provider.not_configured",
+            "status": 503,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "provider.not_supported",
+            "status": 501,
+            "retryable": false,
+            "remediation": "none",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "provider.rejected",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "provider.request_invalid",
+            "status": 400,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "provider.resource_not_found",
+            "status": 404,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "provider.retry_later",
+            "status": 503,
+            "retryable": true,
+            "remediation": "retry",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "provider.throttled",
+            "status": 429,
+            "retryable": true,
+            "remediation": "retry_after",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "provider.unavailable",
+            "status": 502,
+            "retryable": true,
+            "remediation": "retry",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "provider.unexpected",
+            "status": 502,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "rate_limit.account_exceeded",
+            "status": 429,
+            "retryable": true,
+            "remediation": "retry_after",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "GET /v1/legal-entities",
+                "GET /v1/legal-entities/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "rate_limit.key_exceeded",
+            "status": 429,
+            "retryable": true,
+            "remediation": "retry_after",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "GET /v1/legal-entities",
+                "GET /v1/legal-entities/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "rate_limit.legal_entity_creation_exceeded",
+            "status": 429,
+            "retryable": true,
+            "remediation": "retry_after",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "request.body_too_large",
+            "status": 413,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "request.invalid_json",
+            "status": 400,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "request.method_not_allowed",
+            "status": 405,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "edge",
+            "operations": []
+        },
+        {
+            "code": "request.not_found",
+            "status": 404,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "edge",
+            "operations": []
+        },
+        {
+            "code": "request.preflight_ok",
+            "status": 204,
+            "retryable": false,
+            "remediation": "none",
+            "scope": "edge",
+            "operations": []
+        },
+        {
+            "code": "request.resource_id_malformed",
+            "status": 404,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "GET /v1/legal-entities/{id}",
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "send_as.sender_selector_ambiguous",
+            "status": 400,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "send_as.sub_tenant_not_found",
+            "status": 404,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "send_as.sub_tenant_not_sendable",
+            "status": 422,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "send_as.sub_tenant_test_identity_required",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "server.unexpected_error",
+            "status": 500,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "GET /v1/invoices/{id}",
+                "GET /v1/legal-entities",
+                "GET /v1/legal-entities/{id}",
+                "POST /v1/invoices/import",
+                "POST /v1/legal-entities"
+            ]
+        }
+    ]
+}
