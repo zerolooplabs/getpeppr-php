@@ -211,7 +211,7 @@ final class Client
             if ($json === false) {
                 throw new \InvalidArgumentException(
                     'The request cannot be encoded as JSON: every string must be valid UTF-8 '
-                    . '(convert Latin-1 text with mb_convert_encoding() first). Nothing was sent.',
+                    . '(convert Latin-1 text with mb_convert_encoding() first) and every number finite. Nothing was sent.',
                 );
             }
             $request = $request
