@@ -1,0 +1,50 @@
+{
+    "name": "getpeppr/getpeppr-php",
+    "description": "Send the UBL invoices you already generate in PHP over the Peppol network with getpeppr. PSR-18 client: UBL import, document status, platform customers (Legal Entities), webhook signature verification.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["peppol", "ubl", "e-invoicing", "einvoice", "invoice", "psr-18", "getpeppr", "en16931"],
+    "homepage": "https://getpeppr.dev",
+    "support": {
+        "email": "support@getpeppr.dev",
+        "docs": "https://getpeppr.dev/docs",
+        "security": "https://github.com/zerolooplabs/getpeppr-php/security/policy"
+    },
+    "authors": [
+        { "name": "Zero Loop Labs", "homepage": "https://getpeppr.dev" }
+    ],
+    "require": {
+        "php": "^8.2",
+        "ext-hash": "*",
+        "ext-json": "*",
+        "php-http/discovery": "^1.19",
+        "psr/http-client": "^1.0",
+        "psr/http-factory": "^1.0",
+        "psr/http-message": "^1.1 || ^2.0"
+    },
+    "require-dev": {
+        "guzzlehttp/guzzle": "^7.9 || ^8.0",
+        "josemmo/einvoicing": "^0.3.1",
+        "nyholm/psr7": "^1.8",
+        "num-num/ubl-invoice": "^2.4",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^11.5"
+    },
+    "autoload": {
+        "psr-4": { "Getpeppr\\": "src/" }
+    },
+    "autoload-dev": {
+        "psr-4": { "Getpeppr\\Tests\\": "tests/" }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": false
+        }
+    },
+    "scripts": {
+        "test": "phpunit --testsuite unit",
+        "test:contract": "phpunit --testsuite contract",
+        "analyse": "phpstan analyse --no-progress --memory-limit=1G"
+    }
+}

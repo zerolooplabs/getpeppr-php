@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+# Run a command in the pinned PHP development image, from the repository root.
+#   bin/php-docker 8.2 composer test
+# PHP_DOCKER_ENV may name environment variables to pass through (space separated).
+set -eu
+version="${1:?usage: bin/php-docker <8.2|8.3|8.4|8.5> <command...>}"
+shift
+root="$(cd "$(dirname "$0")/.." && pwd)"
+case "$version" in
+  8.2) full=8.2.35 ;; 8.3) full=8.3.36 ;; 8.4) full=8.4.27 ;; 8.5) full=8.5.12 ;;
+  *) echo "unsupported PHP version: $version" >&2; exit 2 ;;
+esac
+image="getpeppr-php-dev:$version"
+docker image inspect "$image" >/dev/null 2>&1 || docker build -q --build-arg "PHP_VERSION=$full" -t "$image" "$root/docker" >/dev/null
+env_args=""
+for name in ${PHP_DOCKER_ENV:-}; do env_args="$env_args -e $name"; done
+# shellcheck disable=SC2086
+exec docker run --rm $env_args -v "$root:/app" -v getpeppr-php-composer-cache:/tmp/composer-cache "$image" "$@"
