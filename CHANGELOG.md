@@ -11,4 +11,5 @@ All notable changes to this package are documented here. The format follows [Kee
 - `Client::createLegalEntity()`, `listLegalEntities()`, `getLegalEntity()`: manage a platform's customers.
 - `Webhook::verify()`: verify `Getpeppr-Signature` and return the event with its id.
 - Exceptions classified by the `Getpeppr-Remediation` header, in a total and ordered matrix, with `DuplicateDocumentException` for the `409` duplicate refusal.
+- `UnreadableResponseException` for a success whose response cannot be read: the call may have taken effect.
 - PSR-18 / PSR-17 transport with `php-http/discovery`. PHP 8.2 to 8.5.

@@ -80,10 +80,12 @@ final class Webhook
     /** @return array{0: string, 1: string} timestamp digits, lowercase hex signature */
     private static function parseHeader(#[\SensitiveParameter] string $header): array
     {
+        // Fields other than t and s are ignored, so that a field added later does
+        // not break verification. A repeated field is refused: never guess which one counts.
         $fields = [];
         foreach (explode(',', $header) as $part) {
             $pair = explode('=', $part, 2);
-            if (count($pair) !== 2 || isset($fields[$pair[0]])) {
+            if (count($pair) !== 2 || $pair[0] === '' || isset($fields[$pair[0]])) {
                 self::malformed();
             }
             $fields[$pair[0]] = $pair[1];
@@ -91,7 +93,7 @@ final class Webhook
 
         $timestamp = $fields['t'] ?? '';
         $signature = $fields['s'] ?? '';
-        if (count($fields) !== 2 || preg_match('/^\d{1,12}$/', $timestamp) !== 1 || preg_match('/^[0-9a-f]{64}$/', $signature) !== 1) {
+        if (preg_match('/^\d{1,12}$/D', $timestamp) !== 1 || preg_match('/^[0-9a-f]{64}$/D', $signature) !== 1) {
             self::malformed();
         }
 

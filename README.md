@@ -118,6 +118,7 @@ Every exception extends `Getpeppr\Exception\GetpepprException`. Its class tells 
 | `AuthenticationException` | The API key was refused. | Check the key. |
 | `RetryableException` | A temporary refusal getpeppr announced (rate limit, validator unavailable, …). | Resend later with the same key, after `$e->retryAfter` seconds when set. |
 | `UnsupportedOperationException` | The operation is not supported. | Do not resend. |
+| `UnreadableResponseException` | The call succeeded but its response could not be read. | It **may have taken effect**: read the status, or resend with the same key (which replays instead of sending twice). |
 | `GetpepprException` itself | A response this version cannot interpret. | Do not guess: keep the document and quote `$e->requestId` to support. |
 
 The family comes from the `Getpeppr-Remediation` header the API sends, not from `retryable` alone: a rejected document and an account that may not send both say `retryable: false`, and they call for opposite actions. `DocumentTooLargeException` is also an `InvalidRequestException`.
@@ -175,14 +176,26 @@ try {
 }
 
 // Deliveries are at least once: the same event can arrive again, with the same id.
-// Reserve the id atomically BEFORE acting on it (PostgreSQL shown; INSERT IGNORE on MySQL).
-$reserve = $pdo->prepare('INSERT INTO getpeppr_events (id) VALUES (?) ON CONFLICT (id) DO NOTHING');
-$reserve->execute([$event->id]);
-if ($reserve->rowCount() === 1) {
-    handle($event->type, $event->data);                // invoice.sent, invoice.error, …
+// Reserve the id and apply the effect in ONE transaction: if handling fails, the
+// reservation is rolled back and the redelivery is handled, not skipped.
+// (PostgreSQL shown; INSERT IGNORE on MySQL.)
+$pdo->beginTransaction();
+try {
+    $reserve = $pdo->prepare('INSERT INTO getpeppr_events (id) VALUES (?) ON CONFLICT (id) DO NOTHING');
+    $reserve->execute([$event->id]);
+    if ($reserve->rowCount() === 1) {
+        handle($event->type, $event->data);            // invoice.sent, invoice.error, …
+    }
+    $pdo->commit();
+} catch (\Throwable $e) {
+    $pdo->rollBack();
+    http_response_code(500);                           // getpeppr delivers it again
+    exit;
 }
 http_response_code(200);
 ```
+
+If the effect cannot live in the same transaction (an email, a call to another service), delete the reservation when handling fails, so that the next delivery is not mistaken for a duplicate.
 
 `verify()` checks the HMAC-SHA256 signature in constant time and refuses a timestamp more than 300 seconds away (`toleranceSeconds:` changes it). It proves the event comes from getpeppr and is recent; it cannot prove it is new, so a legitimate redelivery verifies too. Any answer other than `2xx`, or no answer within 5 seconds, makes getpeppr deliver again after 1, 5 and 30 minutes. A runnable endpoint: [`examples/webhook-endpoint.php`](examples/webhook-endpoint.php). Event types: [getpeppr.dev/docs/webhooks](https://getpeppr.dev/docs/webhooks).
 
@@ -200,7 +213,7 @@ $getpeppr = new Client(
 
 `importInvoice()` also takes `skipValidation: true`, which sends without the Peppol rulebook check for that call (`x-skip-validation`). Use it only for a document you validated yourself.
 
-Every result exposes `requestId`, `resultCode` and `httpStatus`, and `toArray()` returns the decoded response for fields this version does not map. Invalid arguments (a blank id, an API key or idempotency key that cannot be an HTTP header value) throw `\InvalidArgumentException` before anything is sent.
+Every result exposes `requestId`, `resultCode` and `httpStatus`, and `toArray()` returns the decoded response for fields this version does not map. Invalid arguments throw `\InvalidArgumentException` before anything is sent: a blank, `.` or `..` id, an API key or idempotency key that cannot be an HTTP header value, or text that is not valid UTF-8 (convert Latin-1 with `mb_convert_encoding()` first). A response that succeeded but cannot be read throws `UnreadableResponseException`: the call may have taken effect, so check before repeating it.
 
 ## Scope and limits
 

@@ -14,7 +14,6 @@ use Getpeppr\Exception\InvalidRequestException;
 use Getpeppr\Exception\RetryableException;
 use Getpeppr\Exception\TransportException;
 use Getpeppr\Exception\UnsupportedOperationException;
-use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -48,13 +47,13 @@ final class ErrorClassifier
     private const DUPLICATE_CODE = 'invoices_import.duplicate_document';
     private const IDEMPOTENCY_CODES = ['idempotency.key_reused', 'idempotency.key_blank'];
 
-    public static function fromTransportFailure(#[\SensitiveParameter] ClientExceptionInterface $failure): TransportException
+    public static function fromTransportFailure(#[\SensitiveParameter] \Throwable $failure): TransportException
     {
-        // The PSR-18 exception is deliberately NOT chained: it may carry the
+        // The client's exception is deliberately NOT chained: it may carry the
         // request, its body and its Authorization header. Only its class is kept.
         return new TransportException(sprintf(
-            'No response was received from getpeppr (%s). The document may have been sent: '
-            . 'resend with the same Idempotency-Key, never a new one. The package does not retry on its own.',
+            'No response was received from getpeppr (%s). The request may have taken effect: '
+            . 'for a send, resend with the same Idempotency-Key, never a new one. The package does not retry on its own.',
             $failure::class,
         ));
     }
@@ -72,11 +71,11 @@ final class ErrorClassifier
             }
             if ($status === 429 || $status >= 500) {
                 return self::build(TransportException::class, $status, $headers,
-                    'The API host answered without a getpeppr result. Retry later with the same Idempotency-Key.');
+                    'The API host answered without a getpeppr result. Retry later; for a send, reuse the same Idempotency-Key.');
             }
 
             return self::build(GetpepprException::class, $status, $headers,
-                'Unexpected response that getpeppr did not write. Do not guess: keep the document and quote the request id to support.');
+                'Unexpected response that getpeppr did not write. Do not guess: keep what you sent and quote the request id to support.');
         }
 
         if ($code === self::DUPLICATE_CODE) {
@@ -96,17 +95,17 @@ final class ErrorClassifier
 
         return match ($headers->remediation) {
             'fix_request' => self::build(InvalidRequestException::class, $status, $headers,
-                'The request or the document must be fixed. Resending it unchanged fails the same way.'),
+                'The request must be fixed (for a send: the document or its envelope). Resending it unchanged fails the same way.'),
             'contact_support' => self::build(ContactSupportException::class, $status, $headers,
-                'The document is not at fault: the account cannot do this right now. Keep the document and resend it once the account state has changed.'),
+                'Not a fault of the request itself: the account cannot do this right now. Keep what you were sending and repeat it once the account state has changed.'),
             'authenticate' => self::build(AuthenticationException::class, $status, $headers,
                 'The API key was refused.'),
             'retry', 'retry_after' => self::build(RetryableException::class, $status, $headers,
-                'Temporary refusal. Retry later with the same Idempotency-Key.'),
+                'Temporary refusal. Retry later; for a send, reuse the same Idempotency-Key.'),
             'none' => self::build(UnsupportedOperationException::class, $status, $headers,
                 'This operation is not supported. Do not resend.'),
             default => self::build(GetpepprException::class, $status, $headers,
-                'This version of getpeppr-php does not know what this result asks for. Do not guess: keep the document and quote the request id to support.'),
+                'This version of getpeppr-php does not know what this result asks for. Do not guess: keep what you sent and quote the request id to support.'),
         };
     }
 
@@ -165,22 +164,28 @@ final class ErrorClassifier
     /** The one value extracted from the duplicate refusal body; the rest is discarded. */
     private static function duplicateOf(#[\SensitiveParameter] ResponseInterface $response): ?string
     {
-        $body = $response->getBody();
-        if ($body->isSeekable()) {
-            $body->rewind();
-        }
-        $raw = $body->read(self::MAX_DUPLICATE_BODY_BYTES);
-
         try {
+            $body = $response->getBody();
+            if ($body->isSeekable()) {
+                $body->rewind();
+            }
+            $raw = '';
+            while (!$body->eof() && strlen($raw) < self::MAX_DUPLICATE_BODY_BYTES) {
+                $chunk = $body->read(self::MAX_DUPLICATE_BODY_BYTES - strlen($raw));
+                if ($chunk === '') {
+                    break;
+                }
+                $raw .= $chunk;
+            }
             $decoded = json_decode($raw, true, 8, JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
+        } catch (\Throwable) {
             return null;
         } finally {
             unset($raw);
         }
 
         $value = is_array($decoded) ? ($decoded['duplicateOf'] ?? null) : null;
-        if (!is_string($value) || preg_match('/^[A-Za-z0-9-]{1,128}$/', $value) !== 1) {
+        if (!is_string($value) || preg_match('/^[A-Za-z0-9-]{1,128}$/D', $value) !== 1) {
             return null;
         }
 

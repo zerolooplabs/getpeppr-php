@@ -224,11 +224,11 @@ final class ImportInvoiceTest extends TestCase
 
         try {
             TestClient::with($http)->importInvoice(self::UBL, 'i.xml', '9925:BE0314595348');
-            self::fail('expected the root exception');
-        } catch (\Getpeppr\Exception\GetpepprException $e) {
-            self::assertSame(\Getpeppr\Exception\GetpepprException::class, $e::class);
+            self::fail('expected an UnreadableResponseException');
+        } catch (\Getpeppr\Exception\UnreadableResponseException $e) {
+            self::assertInstanceOf(\Getpeppr\Exception\GetpepprException::class, $e);
             self::assertSame(201, $e->status);
-            self::assertStringContainsString('may have been sent', $e->getMessage());
+            self::assertStringContainsString('may have taken effect', $e->getMessage());
         }
     }
 

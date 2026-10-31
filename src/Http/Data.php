@@ -60,4 +60,26 @@ final class Data
 
         return array_values(array_filter($value, 'is_array'));
     }
+
+    /**
+     * True when at least one of the keys holds a non-empty string or an array.
+     * No keys means nothing is required.
+     *
+     * @param array<array-key, mixed> $data
+     * @param list<string> $keys
+     */
+    public static function identifies(array $data, array $keys): bool
+    {
+        if ($keys === []) {
+            return true;
+        }
+        foreach ($keys as $key) {
+            $value = $data[$key] ?? null;
+            if ((is_string($value) && $value !== '') || is_array($value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

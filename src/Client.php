@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Getpeppr;
 
-use Getpeppr\Exception\GetpepprException;
+use Getpeppr\Exception\UnreadableResponseException;
 use Getpeppr\Http\Data;
 use Getpeppr\Http\ErrorClassifier;
 use Getpeppr\Http\ResultHeaders;
@@ -14,7 +14,6 @@ use Getpeppr\LegalEntity\LegalEntity;
 use Getpeppr\LegalEntity\LegalEntityList;
 use Http\Discovery\Psr17FactoryDiscovery;
 use Http\Discovery\Psr18ClientDiscovery;
-use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\RequestInterface;
@@ -33,6 +32,8 @@ final class Client
     public const VERSION = '0.1.0';
     public const DEFAULT_BASE_URL = 'https://api.getpeppr.dev/v1';
 
+    /** Wrapped so that var_dump, print_r, var_export and serialize never show it. */
+    private readonly \SensitiveParameterValue $apiKey;
     private readonly string $baseUrl;
     private readonly ClientInterface $httpClient;
     private readonly RequestFactoryInterface $requestFactory;
@@ -44,15 +45,16 @@ final class Client
      * @param ClientInterface|null $httpClient Any PSR-18 client; discovered when omitted. Configure timeouts on it.
      */
     public function __construct(
-        #[\SensitiveParameter] private readonly string $apiKey,
+        #[\SensitiveParameter] string $apiKey,
         ?string $baseUrl = null,
         ?ClientInterface $httpClient = null,
         ?RequestFactoryInterface $requestFactory = null,
         ?StreamFactoryInterface $streamFactory = null,
     ) {
-        if (preg_match('/^[\x21-\x7E]+$/', $apiKey) !== 1) {
+        if (preg_match('/^[\x21-\x7E]+$/D', $apiKey) !== 1) {
             throw new \InvalidArgumentException('The API key must be a non-empty string of visible ASCII characters.');
         }
+        $this->apiKey = new \SensitiveParameterValue($apiKey);
         $this->baseUrl = self::validatedBaseUrl($baseUrl ?? self::DEFAULT_BASE_URL);
         $this->httpClient = $httpClient ?? Psr18ClientDiscovery::find();
         $this->requestFactory = $requestFactory ?? Psr17FactoryDiscovery::findRequestFactory();
@@ -91,7 +93,7 @@ final class Client
 
         $headers = [];
         if ($idempotencyKey !== null) {
-            if (preg_match('/^[\x20-\x7E]*$/', $idempotencyKey) !== 1) {
+            if (preg_match('/^[\x20-\x7E]*$/D', $idempotencyKey) !== 1) {
                 throw new \InvalidArgumentException('The idempotency key must contain printable ASCII characters only.');
             }
             $headers['Idempotency-Key'] = $idempotencyKey;
@@ -100,7 +102,7 @@ final class Client
             $headers['x-skip-validation'] = 'true';
         }
 
-        [$data, $status, $meta] = $this->call('POST', '/invoices/import', $payload, $headers);
+        [$data, $status, $meta] = $this->call('POST', '/invoices/import', $payload, $headers, ['providerDocumentId', 'id']);
 
         return ImportResult::fromResponse($data, $status, $meta->resultCode, $meta->requestId);
     }
@@ -110,9 +112,9 @@ final class Client
      *
      * @param string $id The provider document id or the submission id; both reach the same document.
      */
-    public function getInvoice(string $id): Invoice
+    public function getInvoice(#[\SensitiveParameter] string $id): Invoice
     {
-        [$data, $status, $meta] = $this->call('GET', '/invoices/' . self::pathSegment($id));
+        [$data, $status, $meta] = $this->call('GET', '/invoices/' . self::pathSegment($id), identifiedBy: ['id', 'providerDocumentId', 'submissionId']);
 
         return Invoice::fromResponse($data, $status, $meta->resultCode, $meta->requestId);
     }
@@ -126,13 +128,13 @@ final class Client
      */
     public function createLegalEntity(#[\SensitiveParameter] array $legalEntity): LegalEntity
     {
-        [$data, $status, $meta] = $this->call('POST', '/legal-entities', $legalEntity);
+        [$data, $status, $meta] = $this->call('POST', '/legal-entities', $legalEntity, identifiedBy: ['id']);
 
         return LegalEntity::fromData($data, $status, $meta->resultCode, $meta->requestId, created: $status === 202);
     }
 
     /** List the customers of your platform, newest first (`GET /v1/legal-entities`, master key). */
-    public function listLegalEntities(?string $externalId = null, ?int $limit = null, ?int $offset = null): LegalEntityList
+    public function listLegalEntities(#[\SensitiveParameter] ?string $externalId = null, ?int $limit = null, ?int $offset = null): LegalEntityList
     {
         $query = array_filter(
             ['externalId' => $externalId, 'limit' => $limit, 'offset' => $offset],
@@ -140,7 +142,7 @@ final class Client
         );
         $path = '/legal-entities' . ($query === [] ? '' : '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986));
 
-        [$data, $status, $meta] = $this->call('GET', $path);
+        [$data, $status, $meta] = $this->call('GET', $path, identifiedBy: ['data']);
 
         $entities = [];
         foreach (Data::listOfObjects($data, 'data') as $entity) {
@@ -161,9 +163,9 @@ final class Client
     }
 
     /** Read one customer of your platform (`GET /v1/legal-entities/{id}`, master key). */
-    public function getLegalEntity(string $id): LegalEntity
+    public function getLegalEntity(#[\SensitiveParameter] string $id): LegalEntity
     {
-        [$data, $status, $meta] = $this->call('GET', '/legal-entities/' . self::pathSegment($id));
+        [$data, $status, $meta] = $this->call('GET', '/legal-entities/' . self::pathSegment($id), identifiedBy: ['id']);
 
         return LegalEntity::fromData($data, $status, $meta->resultCode, $meta->requestId);
     }
@@ -183,27 +185,38 @@ final class Client
     /**
      * @param array<array-key, mixed>|null $payload
      * @param array<string, string> $headers
+     * @param list<string> $identifiedBy A successful body must carry at least one of these fields.
      * @return array{0: array<array-key, mixed>, 1: int, 2: ResultHeaders}
      */
     private function call(
         string $method,
-        string $path,
+        #[\SensitiveParameter] string $path,
         #[\SensitiveParameter] ?array $payload = null,
         #[\SensitiveParameter] array $headers = [],
+        array $identifiedBy = [],
     ): array {
+        $apiKey = $this->apiKey->getValue();
+        assert(is_string($apiKey));
         $request = $this->requestFactory->createRequest($method, $this->baseUrl . $path)
-            ->withHeader('Authorization', 'Bearer ' . $this->apiKey)
+            ->withHeader('Authorization', 'Bearer ' . $apiKey)
             ->withHeader('Accept', 'application/json')
             ->withHeader('User-Agent', 'getpeppr-php/' . self::VERSION);
         foreach ($headers as $name => $value) {
             $request = $request->withHeader($name, $value);
         }
         if ($payload !== null) {
+            // Deliberately without JSON_THROW_ON_ERROR: a JsonException would capture
+            // a json_encode frame whose argument is the whole payload.
+            $json = json_encode($payload, JSON_UNESCAPED_SLASHES);
+            if ($json === false) {
+                throw new \InvalidArgumentException(
+                    'The request cannot be encoded as JSON: every string must be valid UTF-8 '
+                    . '(convert Latin-1 text with mb_convert_encoding() first). Nothing was sent.',
+                );
+            }
             $request = $request
                 ->withHeader('Content-Type', 'application/json')
-                ->withBody($this->streamFactory->createStream(
-                    json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
-                ));
+                ->withBody($this->streamFactory->createStream($json));
         }
 
         $response = $this->send($request);
@@ -214,35 +227,41 @@ final class Client
 
         $meta = ResultHeaders::fromResponse($response);
 
-        return [$this->decode($response, $status, $meta), $status, $meta];
+        return [$this->decode($response, $status, $meta, $identifiedBy), $status, $meta];
     }
 
     private function send(#[\SensitiveParameter] RequestInterface $request): ResponseInterface
     {
         try {
             return $this->httpClient->sendRequest($request);
-        } catch (ClientExceptionInterface $failure) {
+        } catch (\Throwable $failure) {
+            // Any failure of the HTTP client, PSR-18 or not, is a transport failure:
+            // the request may have left. Never chained: it may carry the request.
             throw ErrorClassifier::fromTransportFailure($failure);
         }
     }
 
-    /** @return array<array-key, mixed> */
-    private function decode(#[\SensitiveParameter] ResponseInterface $response, int $status, ResultHeaders $meta): array
+    /**
+     * @param list<string> $identifiedBy
+     * @return array<array-key, mixed>
+     */
+    private function decode(#[\SensitiveParameter] ResponseInterface $response, int $status, ResultHeaders $meta, array $identifiedBy): array
     {
         try {
             $decoded = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
+        } catch (\Throwable) {
             $decoded = null;
         }
-        if (is_array($decoded)) {
+        if (is_array($decoded) && Data::identifies($decoded, $identifiedBy)) {
             return $decoded;
         }
 
-        // A success we cannot read is not a failure to resend: the call may have taken effect.
-        throw new GetpepprException(
+        // A success we cannot read is not a failure to repeat blindly: the call may have taken effect.
+        throw new UnreadableResponseException(
             sprintf(
-                'The request succeeded (HTTP %d) but its response could not be read. It may have been sent: '
-                . 'read its status before resending, and quote the request id to support.',
+                'The request succeeded (HTTP %d) but its response could not be read. It may have taken effect: '
+                . 'check before repeating it (for a send, read the document status or resend with the same Idempotency-Key), '
+                . 'and quote the request id to support.',
                 $status,
             ),
             status: $status,
@@ -256,10 +275,10 @@ final class Client
         );
     }
 
-    private static function pathSegment(string $id): string
+    private static function pathSegment(#[\SensitiveParameter] string $id): string
     {
-        if (trim($id) === '') {
-            throw new \InvalidArgumentException('The id cannot be blank.');
+        if (trim($id) === '' || $id === '.' || $id === '..') {
+            throw new \InvalidArgumentException('The id cannot be blank, "." or "..".');
         }
 
         return rawurlencode($id);

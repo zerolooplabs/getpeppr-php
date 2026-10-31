@@ -13,10 +13,14 @@ namespace Getpeppr;
  */
 final class Sender
 {
+    /** Wrapped so that var_dump, print_r, var_export and serialize never show it. */
+    private readonly \SensitiveParameterValue $value;
+
     private function __construct(
         private readonly string $field,
-        private readonly string $value,
+        #[\SensitiveParameter] string $value,
     ) {
+        $this->value = new \SensitiveParameterValue($value);
     }
 
     /** The getpeppr Legal Entity id (`id` of a LegalEntity). */
@@ -37,7 +41,7 @@ final class Sender
      */
     public function toArray(): array
     {
-        return [$this->field => $this->value];
+        return [$this->field => $this->value->getValue()];
     }
 
     /** @return array<string, string> */

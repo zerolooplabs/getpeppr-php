@@ -120,6 +120,22 @@ final class WebhookTest extends TestCase
         Webhook::verify(self::BODY, $forged, self::SECRET, now: self::NOW);
     }
 
+    #[Test]
+    public function an_unknown_extra_field_in_the_header_is_ignored(): void
+    {
+        $event = Webhook::verify(self::BODY, self::sign(self::BODY, self::NOW) . ',v2=' . str_repeat('b', 64), self::SECRET, now: self::NOW);
+
+        self::assertSame('evt_3f2a9c', $event->id);
+    }
+
+    #[Test]
+    public function a_trailing_newline_in_the_signature_is_malformed(): void
+    {
+        $this->expectVerificationFailure('malformed_signature');
+
+        Webhook::verify(self::BODY, self::sign(self::BODY, self::NOW) . "\n", self::SECRET, now: self::NOW);
+    }
+
     /** @return iterable<string, array{string}> */
     public static function malformedHeaders(): iterable
     {

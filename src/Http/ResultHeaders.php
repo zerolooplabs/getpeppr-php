@@ -30,7 +30,7 @@ final class ResultHeaders
     private const CONTROL_CHARACTERS = '/[\x{0000}-\x{001F}\x{007F}-\x{009F}]/u';
 
     /** An absolute https URL, matched on the raw value: no userinfo, no backslash, no whitespace. */
-    private const STRICT_HTTPS_URL = '~^https://[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::\d{1,5})?(?:/[^\s\\\\@]*)?$~i';
+    private const STRICT_HTTPS_URL = '~^https://[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::\d{1,5})?(?:/[^\s\\\\@]*)?$~iD';
 
     private function __construct(
         public readonly ?string $requestId,
@@ -131,7 +131,7 @@ final class ResultHeaders
     private static function deltaSeconds(?string $raw): ?int
     {
         $value = self::bounded($raw, 6);
-        if ($value === null || preg_match('/^\d{1,6}$/', $value) !== 1) {
+        if ($value === null || preg_match('/^\d{1,6}$/D', $value) !== 1) {
             return null;
         }
 
