@@ -2,7 +2,15 @@
 
 All notable changes to this package are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the package follows [Semantic Versioning](https://semver.org/) (0.x: the interface may still change between minor versions).
 
-## [Unreleased]
+## [0.2.0] - Unreleased (tag after merge)
+
+### Added
+
+- Send-only Legal Entities (GPR-1460). `LegalEntity` exposes `networkRole`, `customerReference`, `receiving` (`Receiving`: `handledBy`, `smpHost`, `lastVerifiedAt`, `lifecycleResponses`), `suspension` (`Suspension`: `reasons`, `since`, while `status` is `suspended`) and `authorisation` (`Authorisation`: `method`, `reason`, send-only entities only), which `/v1/legal-entities` returns since 2026-11-13. They are never filled in: an absent `networkRole` is `null`, never `send_and_receive`, and an object with any malformed member is `null` as a whole (a member is never repaired into `null`, a suspension never shortened to the reasons that could be read); `toArray()` keeps the raw value. Vocabularies stay open strings. `createLegalEntity()` documents `networkRole` and `customerReference`, which it already sent as given. README section « Send-only (Belgium) ».
+
+### Changed
+
+- `tests/fixtures/api-results.json` resynchronised with the result catalogue at getpeppr `e44c14e1a`: 15 results added, none removed — the send-only codes (`legal_entities.send_only_*`, `network_role_*`, `customer_reference_immutable`, `receiving_registration_*`, `invoices.sender_sending_suspended`, `invoices.send_only_daily_limit`), `invoices.sender_country_not_served`, `idempotency.concurrent_request` and `idempotency.cache_unreadable`. The classifier is unchanged: every new row lands in the family its `Getpeppr-Remediation` names (for example `ContactSupportException` for `legal_entities.send_only_not_enabled` and `invoices.sender_sending_suspended`, `RetryableException` with `retryAfter` for `invoices.send_only_daily_limit`).
 
 ### Fixed
 

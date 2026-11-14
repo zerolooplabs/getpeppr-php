@@ -30,7 +30,7 @@ use Psr\Http\Message\StreamFactoryInterface;
  */
 final class Client
 {
-    public const VERSION = '0.1.0';
+    public const VERSION = '0.2.0';
     public const DEFAULT_BASE_URL = 'https://api.getpeppr.dev/v1';
 
     /** Wrapped so that var_dump, print_r, var_export and serialize never show it. */
@@ -124,8 +124,12 @@ final class Client
      * Create a customer of your platform (`POST /v1/legal-entities`, master key).
      *
      * Idempotent by `externalId`: replaying the same entity returns it with `created === false`.
+     * `networkRole` (`send_and_receive` by default, or `send_only`) and `customerReference`
+     * (your contract reference, 1–64 characters; required for a production `send_only` entity)
+     * are fixed at creation. Send-only is enabled per account by getpeppr: otherwise the call
+     * throws `ContactSupportException` with `legal_entities.send_only_not_enabled`.
      *
-     * @param array<string, mixed> $legalEntity externalId, companyName, country, address, identifier…
+     * @param array<string, mixed> $legalEntity externalId, companyName, country, address, identifier(s), networkRole, customerReference…
      */
     public function createLegalEntity(#[\SensitiveParameter] array $legalEntity): LegalEntity
     {

@@ -107,6 +107,32 @@ $one  = $getpeppr->getLegalEntity($customer->id);
 
 The supplier written in the document must be that customer: getpeppr never rewrites your document, so a disagreement is refused. A standard key that names a sender is refused with `403`. In the sandbox you can test without a real company: see [the sandbox pilot guide](https://getpeppr.dev/docs/platform/sandbox-pilot/).
 
+### Send-only (Belgium)
+
+A customer that already receives its invoices at another Peppol access point, and keeps doing so, can be created `send_only`: getpeppr only sends for it, and keeps checking that the other access point still receives for it. Send-only is **enabled per account by getpeppr**; otherwise the call throws `ContactSupportException` with `legal_entities.send_only_not_enabled`, in the sandbox as in production. The role and `customerReference` are fixed at creation.
+
+```php
+$customer = $getpeppr->createLegalEntity([
+    'externalId'        => 'be-customer-7',
+    'companyName'       => 'Example BV',
+    'country'           => 'BE',
+    'address'           => ['line1' => 'Rue de la Loi 1', 'city' => 'Bruxelles', 'zip' => '1000'],
+    // Sandbox test range; with a live key, the enterprise number the company already receives on.
+    'identifiers'       => [['scheme' => '0208', 'value' => '0000500044']],
+    'networkRole'       => 'send_only',
+    'customerReference' => 'CTR-2026-0412',          // your contract reference, required with a live key
+]);
+
+$customer = $getpeppr->getLegalEntity($customer->id);
+$customer->networkRole;              // 'send_only'
+$customer->receiving?->handledBy;    // 'elsewhere', 'none' or 'unknown' ('getpeppr' for send_and_receive)
+if ($customer->status === 'suspended') {
+    $customer->suspension?->reasons; // e.g. ['receiving_registration_lost']
+}
+```
+
+`networkRole`, `customerReference`, `receiving`, `suspension` and `authorisation` are read-only and never filled in: an absent `networkRole` is `null` (unknown, not `send_and_receive`), and a `receiving`, `suspension` or `authorisation` with any malformed member is `null` as a whole, its raw value still in `toArray()`. Their vocabularies are open strings. Today a send-only customer does not reach `active` and cannot send yet: the authorisation it needs is not open. Once it can, a send while it is `suspended` throws `ContactSupportException` (`invoices.sender_sending_suspended`), and in its first 30 days a 51st document in one UTC day throws `RetryableException` (`invoices.send_only_daily_limit`, `retryAfter` up to the next 00:00 UTC). The rules, in order, are on [the Legal Entities page](https://getpeppr.dev/docs/platform/legal-entities/#network-role).
+
 ## When a call fails
 
 Every exception extends `Getpeppr\Exception\GetpepprException`. Its class tells you what to do:

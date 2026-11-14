@@ -1,7 +1,7 @@
 {
     "source": {
         "file": "packages/website/src/data/api-results.generated.ts",
-        "commit": "60522a1d4",
+        "commit": "e44c14e1a",
         "published": "https://getpeppr.dev/docs/api-results/",
         "operations": [
             "POST /v1/invoices/import",
@@ -88,6 +88,26 @@
                 "GET /v1/legal-entities/{id}",
                 "POST /v1/invoices/import",
                 "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "idempotency.cache_unreadable",
+            "status": 409,
+            "retryable": true,
+            "remediation": "retry",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "idempotency.concurrent_request",
+            "status": 409,
+            "retryable": true,
+            "remediation": "retry",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
             ]
         },
         {
@@ -178,6 +198,36 @@
             "scope": "route",
             "operations": [
                 "GET /v1/invoices/{id}"
+            ]
+        },
+        {
+            "code": "invoices.send_only_daily_limit",
+            "status": 429,
+            "retryable": true,
+            "remediation": "retry_after",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices.sender_country_not_served",
+            "status": 422,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
+            ]
+        },
+        {
+            "code": "invoices.sender_sending_suspended",
+            "status": 422,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/invoices/import"
             ]
         },
         {
@@ -461,6 +511,16 @@
             ]
         },
         {
+            "code": "legal_entities.customer_reference_immutable",
+            "status": 409,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
             "code": "legal_entities.france_identifier_order",
             "status": 400,
             "retryable": false,
@@ -541,6 +601,26 @@
             ]
         },
         {
+            "code": "legal_entities.network_role_change_not_available",
+            "status": 409,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.network_role_invalid",
+            "status": 400,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
             "code": "legal_entities.not_found",
             "status": 404,
             "retryable": false,
@@ -591,6 +671,26 @@
             ]
         },
         {
+            "code": "legal_entities.receiving_registration_not_found",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.receiving_registration_unverifiable",
+            "status": 503,
+            "retryable": true,
+            "remediation": "retry",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
             "code": "legal_entities.request_invalid",
             "status": 400,
             "retryable": false,
@@ -606,6 +706,56 @@
             "status": 422,
             "retryable": false,
             "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.send_only_customer_reference_missing",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.send_only_not_available_in_country",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.send_only_not_enabled",
+            "status": 403,
+            "retryable": false,
+            "remediation": "contact_support",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.send_only_proof_identifier_missing",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
+            "scope": "route",
+            "operations": [
+                "POST /v1/legal-entities"
+            ]
+        },
+        {
+            "code": "legal_entities.send_only_sandbox_identity_required",
+            "status": 422,
+            "retryable": false,
+            "remediation": "fix_request",
             "scope": "route",
             "operations": [
                 "POST /v1/legal-entities"
