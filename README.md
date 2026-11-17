@@ -109,7 +109,7 @@ The supplier written in the document must be that customer: getpeppr never rewri
 
 ### Send-only (Belgium)
 
-A customer that already receives its invoices at another Peppol access point, and keeps doing so, can be created `send_only`: getpeppr only sends for it, and keeps checking that the other access point still receives for it. Send-only is **enabled per account by getpeppr**; otherwise the call throws `ContactSupportException` with `legal_entities.send_only_not_enabled`, in the sandbox as in production. The role and `customerReference` are fixed at creation.
+A customer that already receives its invoices at another Peppol access point, and keeps doing so, can be created `send_only`: getpeppr only sends for it, and keeps checking that the other access point still receives for it. In the sandbox, send-only is open to every platform account. In production it is **enabled per account by getpeppr**; otherwise the call throws `ContactSupportException` with `legal_entities.send_only_not_enabled`. The role and `customerReference` are fixed at creation.
 
 ```php
 $customer = $getpeppr->createLegalEntity([
@@ -131,7 +131,7 @@ if ($customer->status === 'suspended') {
 }
 ```
 
-`networkRole`, `customerReference`, `receiving`, `suspension` and `authorisation` are read-only and never filled in: an absent `networkRole` is `null` (unknown, not `send_and_receive`), and a `receiving`, `suspension` or `authorisation` with any malformed member is `null` as a whole, its raw value still in `toArray()`. Their vocabularies are open strings. Today a send-only customer does not reach `active` and cannot send yet: the authorisation it needs is not open. Once it can, a send while it is `suspended` throws `ContactSupportException` (`invoices.sender_sending_suspended`), and in its first 30 days a 51st document in one UTC day throws `RetryableException` (`invoices.send_only_daily_limit`, `retryAfter` up to the next 00:00 UTC). The rules, in order, are on [the Legal Entities page](https://getpeppr.dev/docs/platform/legal-entities/#network-role).
+`networkRole`, `customerReference`, `receiving`, `suspension` and `authorisation` are read-only and never filled in: an absent `networkRole` is `null` (unknown, not `send_and_receive`), and a `receiving`, `suspension` or `authorisation` with any malformed member is `null` as a whole, its raw value still in `toArray()`. Their vocabularies are open strings. In production a send-only customer does not reach `active` and cannot send yet: the authorisation it needs is not open. In the sandbox its authorisation is simulated and its receiving is checked on the Peppol test network within minutes: a test-range number that no access point serves ends `suspended`, while getpeppr's sandbox proof identity `0208:0000146389` counts as received elsewhere, becomes `active` and can send to a test buyer. Once it is `active`, a send while it is `suspended` throws `ContactSupportException` (`invoices.sender_sending_suspended`), and in its first 30 days a 51st document in one UTC day throws `RetryableException` (`invoices.send_only_daily_limit`, `retryAfter` up to the next 00:00 UTC). The rules, in order, are on [the Legal Entities page](https://getpeppr.dev/docs/platform/legal-entities/#network-role).
 
 ## When a call fails
 

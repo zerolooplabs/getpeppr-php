@@ -2,6 +2,12 @@
 
 All notable changes to this package are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the package follows [Semantic Versioning](https://semver.org/) (0.x: the interface may still change between minor versions).
 
+## [Unreleased]
+
+### Fixed
+
+- Documentation: send-only activation is production's (getpeppr GPR-1464, live since 2026-11-16). The README « Send-only » section and the `createLegalEntity()` docblock now say that the sandbox is open to every platform account, that `legal_entities.send_only_not_enabled` is a production refusal, and how a sandbox send-only customer moves through its lifecycle (simulated authorisation; the proof identity `0208:0000146389` becomes `active`). No code change.
+
 ## [0.2.0] - 2026-11-14
 
 ### Added

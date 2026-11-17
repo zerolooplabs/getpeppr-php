@@ -126,8 +126,9 @@ final class Client
      * Idempotent by `externalId`: replaying the same entity returns it with `created === false`.
      * `networkRole` (`send_and_receive` by default, or `send_only`) and `customerReference`
      * (your contract reference, 1–64 characters; required for a production `send_only` entity)
-     * are fixed at creation. Send-only is enabled per account by getpeppr: otherwise the call
-     * throws `ContactSupportException` with `legal_entities.send_only_not_enabled`.
+     * are fixed at creation. Send-only is open to every platform account in the sandbox; in
+     * production it is enabled per account by getpeppr: otherwise the call throws
+     * `ContactSupportException` with `legal_entities.send_only_not_enabled`.
      *
      * @param array<string, mixed> $legalEntity externalId, companyName, country, address, identifier(s), networkRole, customerReference…
      */
